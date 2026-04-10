@@ -1,0 +1,39 @@
+project:
+  name: realestate-tracker
+  environment: dev
+  region: ap-south-1
+
+aws:
+  s3:
+    bronze: realestate-tracker-bronze-dev
+    silver: realestate-tracker-silver-dev
+    gold:   realestate-tracker-gold-dev
+  dynamodb:
+    locks_table: terraform-locks
+
+scraper:
+  cities:
+    - name: gurugram
+      state: haryana
+    - name: delhi-ncr
+      state: delhi
+    - name: bengaluru
+      state: karnataka
+  sources:
+    - magicbricks
+    - 99acres
+    - housing
+  delay_seconds: 2
+  rotate_user_agents: true
+
+pipeline:
+  schedule: "0 6 * * *"   # runs 6 AM IST daily
+  batch_size: 1000
+  bronze_prefix: raw
+  silver_prefix: cleaned
+  gold_prefix: aggregated
+
+alerts:
+  price_drop_threshold_pct: 5
+  channels:
+    - email
