@@ -7,8 +7,9 @@ from playwright.async_api import async_playwright
 OUTPUT_FILE = "data/raw/magicbricks_listings.json"
 URL = "https://www.magicbricks.com/property-for-sale/residential-real-estate?proptype=Multistorey-Apartment&cityName=Gurgaon"
 
-async def scrape():
+async def scrape(max_listings: int = 300):
     listings = []
+    seen_titles = set()  # dedup tracker
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -25,52 +26,71 @@ async def scrape():
         await page.goto(URL, wait_until="networkidle", timeout=60000)
         await page.wait_for_timeout(4000)
 
-        # Get all cards
-        cards = await page.query_selector_all("div.mb-srp__card")
-        print(f"Found {len(cards)} listings")
+        scroll_round = 0
+        max_scrolls = 12  # 12 scrolls × ~15 new listings = ~180 listings
+        no_new_count = 0  # stop if no new listings after 3 scrolls
 
-        for card in cards:
-            try:
-                # Get title from the 'title' attribute — has full location info
-                title_el  = await card.query_selector("h2.mb-srp__card--title")
-                full_title = await title_el.get_attribute("title") if title_el else None
-                price_el  = await get_text(card, "div.mb-srp__card__price--amount")
-                unit_el   = await get_text(card, "div.mb-srp__card__price--size")
-                ppsf_el   = await get_text(card, "div.mb-srp__card__price--prpsqft")
-                area_el   = await get_text(card, "div[data-summary='super-area'] div.mb-srp__card__summary--value")
-                url_el    = await get_attr(card, "h2.mb-srp__card--title a", "href")
+        while scroll_round < max_scrolls and len(listings) < max_listings:
+            # Extract all cards currently on page
+            cards = await page.query_selector_all("div.mb-srp__card")
+            new_this_round = 0
 
-                # Parse locality from title
-                # Format: "3 BHK Flat for Sale in Society Name, Locality, City"
-                locality = extract_locality(full_title)
+            for card in cards:
+                try:
+                    title_el   = await card.query_selector("h2.mb-srp__card--title")
+                    full_title = await title_el.get_attribute("title") if title_el else None
 
-                item = {
-                    "title":          full_title,
-                    "price":          clean_price(price_el, unit_el),
-                    "price_per_sqft": clean_number(ppsf_el),
-                    "area_sqft":      clean_number(area_el),
-                    "locality":       locality,
-                    "city":           "gurugram",
-                    "bhk":            extract_bhk(full_title),
-                    "listing_date":   str(date.today()),
-                    "source":         "magicbricks",
-                    "url": f"https://www.magicbricks.com{url_el}" if url_el and url_el.startswith("/") else url_el,
-                }
+                    # Skip if already seen
+                    if not full_title or full_title in seen_titles:
+                        continue
+                    seen_titles.add(full_title)
 
-                print(f"  → {item['bhk']} BHK | ₹{item['price']} | {item['locality']}")
-                listings.append(item)
+                    price_el = await get_text(card, "div.mb-srp__card__price--amount")
+                    ppsf_el  = await get_text(card, "div.mb-srp__card__price--size")
+                    area_el  = await get_text(card, "div[data-summary='super-area'] div.mb-srp__card__summary--value")
+                    url_el   = await get_attr(card, "h2.mb-srp__card--title a", "href")
 
-            except Exception as e:
-                print(f"  Error on card: {e}")
-            continue
+                    item = {
+                        "title":          full_title,
+                        "price":          clean_price(price_el),
+                        "price_per_sqft": clean_price(ppsf_el),
+                        "area_sqft":      clean_number(area_el),
+                        "locality":       extract_locality(full_title),
+                        "city":           "gurugram",
+                        "bhk":            extract_bhk(full_title),
+                        "listing_date":   str(date.today()),
+                        "source":         "magicbricks",
+                        "url": f"https://www.magicbricks.com{url_el}" if url_el and url_el.startswith("/") else url_el,
+                    }
+
+                    listings.append(item)
+                    new_this_round += 1
+
+                except Exception as e:
+                    continue
+
+            print(f"  Scroll {scroll_round+1}: +{new_this_round} new | Total: {len(listings)}")
+            # Save after every scroll — so we don't lose data
+            with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+                json.dump(listings, f, ensure_ascii=False, indent=2)
+
+            # Stop if no new listings coming in
+            if new_this_round == 0:
+                no_new_count += 1
+                if no_new_count >= 3:
+                    print("  No new listings after 3 scrolls — stopping.")
+                    break
+            else:
+                no_new_count = 0
+
+            # Scroll down to load more
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await page.wait_for_timeout(3000)  # wait for new listings to load
+            scroll_round += 1
 
         await browser.close()
 
-    # Save to JSON
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(listings, f, ensure_ascii=False, indent=2)
-
-    print(f"\nDone! Saved {len(listings)} listings to {OUTPUT_FILE}")
+    print(f"\nTotal scraped: {len(listings)} listings")
     return listings
 
 
@@ -87,18 +107,23 @@ async def get_attr(element, selector, attr):
         return await el.get_attribute(attr)
     return None
 
-def clean_price(amount, unit):
-    if not amount:
+def clean_price(raw_text):
+    if not raw_text:
         return None
     try:
-        val = float(re.sub(r"[^\d.]", "", amount))
-        if unit:
-            u = unit.strip().lower()
-            if "cr" in u:
-                return round(val * 10000000, 2)
-            if "lac" in u or "lakh" in u:
-                return round(val * 100000, 2)
-        return val
+        # raw_text looks like "₹1.97 Cr" or "₹12,710 per sqft"
+        raw_text = raw_text.replace("₹", "").replace(",", "").strip()
+        # Extract number
+        match = re.search(r"[\d.]+", raw_text)
+        if not match:
+            return None
+        val = float(match.group())
+        raw_lower = raw_text.lower()
+        if "cr" in raw_lower:
+            return int(round(val * 10000000))
+        if "lac" in raw_lower or "lakh" in raw_lower:
+            return int(round(val * 100000))
+        return int(val)
     except:
         return None
 
