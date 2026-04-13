@@ -27,3 +27,14 @@ resource "aws_s3_bucket" "gold" {
     Environment = "dev"
   }
 }
+
+# Glue scripts bucket
+resource "aws_s3_bucket" "glue_scripts" {
+  bucket = "${var.project_name}-scripts-dev"
+
+  tags = {
+    Project     = var.project_name
+    Layer       = "scripts"
+    Environment = var.environment
+  }
+}
