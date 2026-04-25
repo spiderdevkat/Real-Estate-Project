@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: bhk_price_summary
+    description: "Average, min, max price by city and BHK type"
+    columns:
+      - name: city
+        tests: [not_null]
+      - name: bhk
+        tests: [not_null]
+      - name: total_listings
+        tests: [not_null]
+      - name: avg_price
+        tests: [not_null]
+
+  - name: city_price_summary
+    description: "Daily price summary by city and source"
+    columns:
+      - name: city
+        tests: [not_null]
+      - name: source
+        tests: [not_null]
+      - name: total_listings
+        tests: [not_null]
+
+  - name: locality_hotspots
+    description: "Top localities by listing count with price stats"
+    columns:
+      - name: city
+        tests: [not_null]
+      - name: locality
+        tests: [not_null]
+      - name: listings_count
+        tests: [not_null]
+
+  - name: price_changes
+    description: "Listings where price changed between scrapes (SCD2 delta)"
+    columns:
+      - name: listing_hash
+        tests: [not_null]
+      - name: delta
+        description: "new_price - old_price in absolute terms"
+
+  - name: source_quality
+    description: "Price coverage and data quality per source per day"
+    columns:
+      - name: source
+        tests: [not_null]
+      - name: price_coverage_pct
+        description: "% of listings that have a price"

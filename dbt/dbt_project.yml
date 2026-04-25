@@ -1,0 +1,15 @@
+name: realestate
+version: '1.0.0'
+profile: realestate
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+
+models:
+  realestate:
+    gold:
+      +materialized: view
+      +schema: gold
+      +database: "{{ env_var('PG_DBNAME') }}"

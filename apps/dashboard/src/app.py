@@ -86,6 +86,16 @@ fig_heatmap = px.scatter(
 )
 st.plotly_chart(fig_heatmap, use_container_width=True)
 
+# Add after heatmap:
+st.subheader("🔔 Price Drop Alerts (Pro Feature)")
+alerts = fetch_data("/api/alerts", {"city": "gurugram", "threshold_pct": 5})
+if alerts:
+    st.success(f"🚨 {len(alerts)} localities with >5% price drops!")
+    alert_df = pd.DataFrame(alerts)
+    st.dataframe(alert_df)
+else:
+    st.info("✅ No major price drops detected")
+
 # Stats Cards
 col1, col2, col3 = st.columns(3)
 with col1:

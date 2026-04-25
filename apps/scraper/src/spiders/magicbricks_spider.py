@@ -4,12 +4,33 @@ from datetime import date
 import re
 
 class MagicBricksSpider(scrapy.Spider):
-    name = "magicbricks_gurugram"
+    name = "magicbricks"
     source = "magicbricks"
-    city = "gurugram"
+    city = "gurugram"  # default fallback
+
+    def __init__(self, city=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if city:
+            self.city = city
 
     async def start(self):
-        url = "https://www.magicbricks.com/property-for-sale/residential-real-estate?proptype=Multistorey-Apartment&cityName=Gurgaon"
+        self.logger.info(">>> start() called")
+        city_map = {
+            "gurugram": "Gurgaon",
+            "delhi": "Delhi", 
+            "bangalore": "Bangalore",
+        }
+        city_param = city_map.get(self.city.lower(), self.city.capitalize())
+        url = (
+            f"https://www.magicbricks.com/property-for-sale/residential-real-estate"
+            f"?proptype=Multistorey-Apartment&cityName={city_param}"
+        )
+        self.logger.info(f">>> URL: {url}")
+        
+        # Use async for loop pattern instead of yield — guaranteed to work in 2.13
+        async for item in super().start():
+            pass  # consume parent (yields nothing useful)
+        
         yield scrapy.Request(
             url=url,
             meta={
@@ -23,14 +44,16 @@ class MagicBricksSpider(scrapy.Spider):
             errback=self.errback,
         )
 
-    async def parse(self, response):
-        page = response.meta.get("playwright_page")
 
+    async def parse(self, response):
+        self.logger.info(f">>> parse() called! Status: {response.status}, URL: {response.url}")
+        self.logger.info(f">>> Response body preview: {response.text[:300]}")
+        page = response.meta.get("playwright_page")
         cards = response.css("div.mb-srp__card")
         self.logger.info(f"Found {len(cards)} listings on {response.url}")
 
         for card in cards:
-            title    = card.css("h2.mb-srp__card--title a::text").get()
+            title      = card.css("h2.mb-srp__card--title a::text").get()
             price_raw  = card.css("div.mb-srp__card__price--amount::text").get()
             price_unit = card.css("div.mb-srp__card__price--size::text").get()
             ppsf_raw   = card.css("div.mb-srp__card__price--prpsqft::text").get()
@@ -48,7 +71,7 @@ class MagicBricksSpider(scrapy.Spider):
                 "bhk":            self.extract_bhk(title),
                 "listing_date":   str(date.today()),
                 "source":         self.source,
-                "url": f"https://www.magicbricks.com{url}" if url and url.startswith("/") else (url or response.url),
+                "url":            f"https://www.magicbricks.com{url}" if url and url.startswith("/") else (url or response.url),
             }
 
             self.logger.info(f"  → {item['title']} | ₹{item['price']} | {item['locality']}")
@@ -75,7 +98,7 @@ class MagicBricksSpider(scrapy.Spider):
                 if "lac" in u or "lakh" in u:
                     return round(val * 100000, 2)
             return val
-        except:
+        except Exception:
             return None
 
     def clean_number(self, raw):
@@ -83,7 +106,7 @@ class MagicBricksSpider(scrapy.Spider):
             return None
         try:
             return float(re.sub(r"[^\d.]", "", raw))
-        except:
+        except Exception:
             return None
 
     def extract_bhk(self, title):

@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: listings_history
+        description: "SCD2 table with full listing history"
+        columns:
+          - name: listing_hash
+            description: "Unique hash per listing"
+          - name: city
+          - name: source
+          - name: locality
+          - name: bhk
+          - name: price
+          - name: price_per_sqft
+          - name: is_current
+            description: "True = latest record for this listing"
+          - name: effective_from
+          - name: effective_to
