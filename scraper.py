@@ -347,7 +347,7 @@ async def main():
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(
-            headless=False,   # set to True for production
+            headless=True,   # set to True for production
             args=[
                 "--no-sandbox",
                 "--disable-blink-features=AutomationControlled",

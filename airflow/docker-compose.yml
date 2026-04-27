@@ -1,7 +1,7 @@
 version: '3.8'
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1
+  build: .          # ← replace "image: apache/airflow:2.9.1" with this
   env_file: .env
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -9,11 +9,17 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__WEBSERVER__SECRET_KEY: 'realestate-secret-key-change-me'
+    PG_HOST: host.docker.internal
+    PG_PORT: '5432'
+    PG_DBNAME: RealEstateDB
+    PG_USER: postgres
+    PG_PASSWORD: DevGsk_196795
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ../scraper.py:/opt/airflow/scraper.py          # mount your scraper
+    - ../dbt:/opt/airflow/dbt          # ← add this line
     - ../requirements.txt:/opt/airflow/requirements.txt
   depends_on:
     postgres:
@@ -37,16 +43,10 @@ services:
     <<: *airflow-common
     command: >
       bash -c "
-        pip install playwright boto3 python-dotenv asyncio &&
+        pip install playwright boto3 python-dotenv &&
         playwright install chromium &&
-        airflow db init &&
-        airflow users create
-          --username admin
-          --password admin
-          --firstname Admin
-          --lastname User
-          --role Admin
-          --email devender20025090@gmail.com
+        airflow db migrate &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email devender20025090@gmail.com
       "
     restart: on-failure
 
@@ -54,7 +54,7 @@ services:
     <<: *airflow-common
     command: webserver
     ports:
-      - "8080:8080"
+      - "8081:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s

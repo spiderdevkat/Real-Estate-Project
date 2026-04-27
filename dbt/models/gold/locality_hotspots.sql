@@ -14,5 +14,5 @@ where
     and locality is not null
     and price is not null
 group by city, locality
-having count(*) >= 2
+having count(*) >= 1
 order by city, count(*) desc

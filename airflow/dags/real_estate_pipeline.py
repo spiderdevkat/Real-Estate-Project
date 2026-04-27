@@ -86,9 +86,18 @@ def run_dbt(**context):
     """Run dbt gold layer models."""
     import subprocess, os
 
+    env = {
+        **os.environ,   # inherit all existing env vars
+        "PG_HOST":     os.getenv("PG_HOST", "host.docker.internal"),
+        "PG_PORT":     os.getenv("PG_PORT", "5432"),
+        "PG_DBNAME":   os.getenv("PG_DBNAME", "RealEstateDB"),
+        "PG_USER":     os.getenv("PG_USER", "postgres"),
+        "PG_PASSWORD": os.getenv("PG_PASSWORD", ""),
+    }
+
     result = subprocess.run(
         ["dbt", "run", "--profiles-dir", "/opt/airflow/dbt", "--project-dir", "/opt/airflow/dbt"],
-        capture_output=True, text=True, cwd="/opt/airflow"
+        capture_output=True, text=True, cwd="/opt/airflow", env=env
     )
     logger.info(result.stdout)
     if result.returncode != 0:
@@ -99,11 +108,20 @@ def run_dbt(**context):
 
 def run_dbt_tests(**context):
     """Run dbt tests after models."""
-    import subprocess
+    import subprocess, os
+
+    env = {
+        **os.environ,
+        "PG_HOST":     os.getenv("PG_HOST", "host.docker.internal"),
+        "PG_PORT":     os.getenv("PG_PORT", "5432"),
+        "PG_DBNAME":   os.getenv("PG_DBNAME", "RealEstateDB"),
+        "PG_USER":     os.getenv("PG_USER", "postgres"),
+        "PG_PASSWORD": os.getenv("PG_PASSWORD", ""),
+    }
 
     result = subprocess.run(
         ["dbt", "test", "--profiles-dir", "/opt/airflow/dbt", "--project-dir", "/opt/airflow/dbt"],
-        capture_output=True, text=True, cwd="/opt/airflow"
+        capture_output=True, text=True, cwd="/opt/airflow", env=env
     )
     logger.info(result.stdout)
     if result.returncode != 0:
