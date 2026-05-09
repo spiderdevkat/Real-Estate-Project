@@ -11,7 +11,7 @@ select
     )                                                      as price_coverage_pct,
     count(locality)                                        as listings_with_locality,
     count(bhk)                                             as listings_with_bhk
-from "RealEstateDB"."silver"."listings_history"
+from "neondb"."silver"."listings_history"
 where is_current = true
 group by source, city, effective_from
 order by scrape_date desc, source, city

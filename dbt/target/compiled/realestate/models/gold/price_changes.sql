@@ -16,8 +16,8 @@ select
     )                                                               as pct_change,
     h2.effective_from                                               as changed_from_date,
     h1.effective_from                                               as changed_to_date
-from "RealEstateDB"."silver"."listings_history" h1
-join "RealEstateDB"."silver"."listings_history" h2
+from "neondb"."silver"."listings_history" h1
+join "neondb"."silver"."listings_history" h2
     on  h1.listing_hash   = h2.listing_hash
     and h1.is_current     = true
     and h2.is_current     = false

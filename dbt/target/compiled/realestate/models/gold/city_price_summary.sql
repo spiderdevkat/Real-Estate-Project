@@ -9,7 +9,7 @@ select
     round(min(price)::double precision) as min_price,
     round(max(price)::double precision) as max_price,
     round(avg(price_per_sqft))  as avg_price_per_sqft
-from "RealEstateDB"."silver"."listings_history"
+from "neondb"."silver"."listings_history"
 where
     is_current = true
     and price is not null

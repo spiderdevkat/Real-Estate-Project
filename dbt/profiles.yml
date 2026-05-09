@@ -8,5 +8,6 @@ realestate:
       dbname: "{{ env_var('PG_DBNAME') }}"
       user: "{{ env_var('PG_USER') }}"
       password: "{{ env_var('PG_PASSWORD') }}"
-      schema: gold
+      schema: gold_gold
       threads: 4
+      sslmode: require

@@ -1,57 +1,34 @@
-# Real Estate Project
-🏠 Automated Indian real estate price tracker —  Scrapy → AWS S3/Glue/Redshift → FastAPI → Next.js dashboard.  Built with Airflow, Terraform & PySpark.
+# PropTrack India 🏠
+> Real estate price intelligence across Gurugram, Delhi & Bangalore
 
-# 🏠 India Real Estate Price Tracker
+**Live:** https://proptrack-india.vercel.app
 
-> Track, analyse, and get alerted on real estate prices 
-> across Indian cities — powered by a fully automated 
-> data pipeline.
+## Architecture
+Playwright Scraper → S3 Bronze → AWS Glue → S3 Silver (Parquet)
+→ PostgreSQL SCD2 → dbt Gold Layer → Next.js Dashboard
 
-## 🎯 What This Does
-- Scrapes listings daily from MagicBricks, 99acres, Housing.com
-- Tracks price per sqft trends by locality over time
-- Sends alerts when prices drop in your target area
-- Exposes clean data via REST API for brokers & developers
+## Stack
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat&logo=amazonaws)
+![dbt](https://img.shields.io/badge/dbt-FF694B?style=flat&logo=dbt)
+![Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apacheairflow)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js)
 
-## 🏙️ Cities Covered
-Gurugram · Delhi NCR · Bengaluru *(expanding)*
+## Key numbers
+- 180+ listings/day scraped from 3 sources
+- 155 records in SCD Type 2 history table
+- 5 dbt models, 12 passing data tests
+- Airflow DAG runs daily at 2AM IST
+- 6 CloudWatch alarms + SNS email alerts
 
-## ⚙️ Tech Stack
-| Layer | Technology |
-|-------|-----------|
-| Scraping | Scrapy + Playwright |
-| Orchestration | Apache Airflow |
-| Storage | AWS S3 (Bronze/Silver/Gold) |
-| Pipeline | AWS Glue + Lambda |
-| Warehouse | Amazon Redshift |
-| API | FastAPI on AWS Lambda |
-| Dashboard | Next.js + Recharts |
-| IaC | Terraform |
-| CI/CD | GitHub Actions |
-
-## 🏗️ Architecture
-
-Raw Scrape → S3 Bronze
-→ Glue Clean → S3 Silver
-→ Glue Aggregate → S3 Gold
-→ Redshift Warehouse
-→ FastAPI
-→ Next.js Dashboard
-
-## 📁 Project Structure
-
-├── apps/
-│   ├── scraper/       # Scrapy spiders
-│   ├── api/           # FastAPI backend
-│   └── dashboard/     # Next.js frontend
-├── infra/
-│   └── terraform/     # All AWS infrastructure
-├── shared/            # Reusable utilities
-└── configs/           # Environment configs
-
-## 🚀 Status
-🟡 In active development 
-
-## 👨‍💻 Author
-Devender Kataria — Data Engineer
-[LinkedIn](https://linkedin.com/in/devender-kataria-a2516b1b9)
+## Pipeline
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Ingestion | Playwright + Python | Scrape 3 real estate sites |
+| Bronze | AWS S3 (JSON) | Raw data, date-partitioned |
+| Silver | AWS Glue + Parquet | Cleaned, normalised |
+| Gold | PostgreSQL + dbt | Analytics-ready views |
+| Orchestration | Airflow (Docker) | Daily scheduling |
+| Validation | AWS Lambda | Auto-triggers on S3 upload |
+| Monitoring | CloudWatch + SNS | Alerts on failures |
+| Dashboard | Next.js + Vercel | Live at proptrack-india.vercel.app |
