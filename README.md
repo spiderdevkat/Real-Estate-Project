@@ -19,7 +19,7 @@ Playwright Scraper → S3 Bronze → AWS Glue → S3 Silver (Parquet)
 - 155 records in SCD Type 2 history table
 - 5 dbt models, 12 passing data tests
 - Airflow DAG runs daily at 2AM IST
-- 6 CloudWatch alarms + SNS email alerts
+- 5 CloudWatch alarms + SNS email alerts
 
 ## Pipeline
 | Layer | Technology | Purpose |
